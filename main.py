@@ -38,7 +38,7 @@ global_data = {
     "ssh_clients": {},
     "ssh_tunnels": {},
     "ssh_log": {},
-    "current_ssh_log":"",
+    "current_ssh_log": "",
 }
 
 
@@ -234,6 +234,8 @@ def get_innerText_from_selecter(p):
 
 
 def click_from_selecter(p):
+    s = f"document.querySelector('{p}').click()"
+    print("click_from_selecter", s)
     return selenium_device["driver"].execute_script(
         f"document.querySelector('{p}').click()"
     )
@@ -348,6 +350,20 @@ _log_ssh_cmd = None
 def log_ssh_cmd(msg, *args, **kwargs):
     if _log_ssh_cmd:
         _log_ssh_cmd(msg, *args, **kwargs)
+
+_global_task_queue = {}
+
+
+def add_global_task(name, task, interval_seconds=1):
+    _global_task_queue[name] = {
+        "task_func": task,
+        "interval_seconds": interval_seconds,
+    }
+
+
+def delete_global_task(name):
+    print("del_global_task", name)
+    _global_task_queue.pop(name, None)
 
 
 # 启动服务
@@ -712,25 +728,32 @@ def ui_core():
 
                 def close_instance(module):
                     def __t(ce: ft.ControlEvent):
-                        uuid = module.get("cloud_info", {}).get("uuid", "")
-                        row_id = find_uuid(uuid)
-                        # 关闭实例
-                        selector_p = f"#app > div.user-console > div.data-list-common > div.page-content > div.table-list > div > div.loading-box.instance-table > div.table-box.fixed-height > div > div.el-table__body-wrapper.is-scrolling-none > table > tbody > tr.el-table__row.el-table__row--striped > td.el-table_1_column_10.el-table__cell > div > div > button"
-                        selector_p = selector_p.replace(
-                            "> tr.el-table__row.el-table__row--striped",
-                            f"> tr:nth-child({row_id})",
-                        )
-
-                        text = get_innerText_from_selecter(selector_p)
-                        if text == "关机":
-                            delete_global_task(f"set_shutdown_at_delay_{uuid}")
-                            click_from_selecter(selector_p)
-                            time.sleep(2)
-                            click_from_selecter(
-                                "body > div.el-overlay.is-message-box > div > div.el-message-box__btns > button.el-button.el-button--default.el-button--small.el-button--primary",
+                        try:
+                            uuid = module.get("cloud_info", {}).get("uuid", "")
+                            row_id = find_uuid(uuid)
+                            # 关闭实例
+                            selector_p = f"#app > div.user-console > div.data-list-common > div.page-content > div.table-list > div > div.loading-box.instance-table > div.table-box.fixed-height > div > div.el-table__body-wrapper.is-scrolling-none > table > tbody > tr.el-table__row.el-table__row--striped > td.el-table_1_column_10.el-table__cell > div > div > button"
+                            selector_p = selector_p.replace(
+                                "> tr.el-table__row.el-table__row--striped",
+                                f"> tr:nth-child({row_id})",
                             )
-                            
 
+                            text = get_innerText_from_selecter(selector_p).strip()
+                            if text.index("关机") != -1:
+                                # 关闭ssh
+                                delete_global_task(f"set_shutdown_at_delay_{uuid}")
+                                click_from_selecter(selector_p)
+                                time.sleep(2)
+                                click_from_selecter(
+                                    "body > div.el-overlay.is-message-box > div > div.el-message-box__btns > button.el-button.el-button--default.el-button--small.el-button--primary",
+                                )
+                            else:
+                                print("text:", text, text.index("关机"))
+                                print("selector_p:", selector_p)
+
+                        except Exception as e:
+                            logger.debug("close_instance error", e)
+                            pass
                     return __t
 
                 for module in modules:
@@ -829,19 +852,6 @@ def ui_core():
 
     flet.app(target=main)
 
-
-_global_task_queue = {}
-
-
-def add_global_task(name, task, interval_seconds=1):
-    _global_task_queue[name] = {
-        "task_func": task,
-        "interval_seconds": interval_seconds,
-    }
-
-
-def del_global_task(name):
-    _global_task_queue.pop(name, None)
 
 
 # 不严格的定时器,一秒执行一次

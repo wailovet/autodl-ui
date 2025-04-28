@@ -3,7 +3,6 @@
         {
             "name": "CosyVoice2",
             "mirror_name": "FunAudioLLM/CosyVoice/CosyVoice2:v1.0",
-            // "start_command": "cd /root/CosyVoice ; python webui.py --port 46006 --model_dir pretrained_models/CosyVoice2-0.5B",
             "start_command": "bash -l -c \"source ~/.bashrc && python -V && cd /root/CosyVoice && python gradio_app.py --port 46006 --model_dir pretrained_models/CosyVoice2-0.5B\"",
             "must_tunnel_port": 7860,
             "remote_webui_addr": "http://127.0.0.1:7860",
@@ -14,9 +13,11 @@
             ]
         },
         {
-            "name": "Flux",
-            "mirror_name": "XX",
-            "start_command": "",
+            "name": "FramePack",
+            "mirror_name": "lllyasviel/FramePack/FramePack-imgtovideo:v1",
+            "start_command": "bash -l -c \"source ~/.bashrc && source /etc/network_turbo && python -V && cd /root/autodl-tmp/FramePack && python demo_gradio.py --port 46007\"",
+            "must_tunnel_port": 46007,
+            "remote_webui_addr": "http://127.0.0.1:46007",
         },
     ],
 }
